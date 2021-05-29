@@ -1,8 +1,13 @@
-# Steps to Deploy YOLACT++ with ONNX RUNTIME C++ API
+# Intro
+
+This repo describes an available method to deploy [YOLACT+](https://github.com/dbolya/yolact)
+with [onnxruntime](https://github.com/microsoft/onnxruntime) C++ API.
+
+## Steps to Deploy YOLACT++ with ONNX RUNTIME C++ API
 
 1. Modify YOLACT++ to export ONNX model.
     + Compile DCNv2 with `python setup.py build develop` for a dynamic library `_ext.cpython-...`.
-      (Some modification might be required according to your `libtorch` version.)
+      (Some modification might be required according to your `libtorch` version. I chose https://github.com/lbin/DCNv2)
     + Modify YOLACT++ to export ONNX models. (See below)
 2. Load it.
     + Register the custom op (See `main2.cpp` for an example).
@@ -12,6 +17,7 @@
 ## Notes
 
 + I have only compiled and run it with `USE_CUDA` and `WITH_CUDA` defined.
+  Potential memory alignment error may occur when running on CPU.
 + Take care for your paths for libs.
 
 ## Modification on YOLACT++
@@ -31,6 +37,7 @@ class _DCNv2(Function):
                     stride_h_s=str(stride[0]), stride_w_s=str(stride[1]),
                     deformable_groups_s=str(deformable_groups))
 ```
+(Data in types other than `str` tend to fail. So dumps as `str`s.)
 
 These two lines are to register in python when importing custom op with python from ONNX model.
 I don't know if they are necessary for exporting.
@@ -38,6 +45,8 @@ I don't know if they are necessary for exporting.
 from torch.onnx import register_custom_op_symbolic
 register_custom_op_symbolic('yolact::DCNv2', _DCNv2.symbolic, 11)
 ```
+
+Then you can see with Netron that the DCNv2 is attached with these attributes ![node appearance](DCNv2_node.png).
 
 ### For tracing and Op `Interp`
 Exporting by tracing does not support jit on CUDA.
@@ -155,4 +164,20 @@ Export the ONNX model and dump the matrix `priors`, which seems not to exist in 
 ```plain
 -            net = net.cuda()
 +            net = net#.cuda()
+```
+
+# License and Disclaimer
+
+I dedicate codes in this repository to the public domain,
+without warranty of any kind.
+You can use it in any way at your own risk.
+
+# Additional Info
+
+```text
+Cuda: 10.2
+Cudnn: 8.0
+Python: 3.7
+Libtorch: 1.7.1
+Onnx Runtime: 1.6.0
 ```
